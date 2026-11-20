@@ -3,7 +3,7 @@
 ## 1. Base del proyecto
 
 - [x] 1.1 Inicializar la SPA React/TypeScript con Vite y scripts de desarrollo, pruebas y compilación; verificar que la instalación y `npm run build` terminan correctamente.
-- [ ] 1.2 Preparar la configuración mínima de CI para instalar dependencias, ejecutar pruebas y compilar en GitHub Actions; verificar la ejecución del workflow en una rama de prueba.
+- [x] 1.2 Preparar la configuración mínima de CI para instalar dependencias, ejecutar pruebas y compilar en GitHub Actions; verificar la ejecución del workflow en una rama de prueba.
 
 ## 2. Datos y modelo matemático
 
