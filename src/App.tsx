@@ -15,6 +15,7 @@ import {
   fractionToProbability,
   rewards,
   scenarioLabel,
+  sourceReferences,
   type Scenario,
 } from './data/rewards'
 import {
@@ -26,16 +27,45 @@ import { simulateReward } from './math/simulation'
 
 const steps = [1, 3, 5, 10]
 
-function percent(value: number) {
-  if (value === 0) return '0%'
-  if (value < 0.000001) return value.toExponential(3) + '%'
-  return (value * 100).toLocaleString('es-ES', { maximumFractionDigits: 6 }) + '%'
+function RewardThumbnail({ name, src }: { name: string; src: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
+  if (failedSrc === src) {
+    return (
+      <span
+        className="reward-thumbnail reward-thumbnail-fallback"
+        role="img"
+        aria-label={`Imagen no disponible para ${name}`}
+        title="Imagen no disponible"
+      >
+        <span aria-hidden="true">✦</span>
+      </span>
+    )
+  }
+
+  return (
+    <img
+      className="reward-thumbnail"
+      src={src}
+      alt={`Imagen de ${name}`}
+      onError={() => setFailedSrc(src)}
+    />
+  )
+}
+
+export function percent(value: number) {
+  const percentage = value * 100
+  const maximumFractionDigits = percentage < 0.000001 ? 15 : 6
+  return (
+    percentage.toLocaleString('es-ES', { maximumFractionDigits }) + ' %'
+  )
 }
 
 function provenance(rate: (typeof rewards)[number]['rates'][Scenario]) {
-  if (rate.classification === 'published') return 'Epic publicado; verificado'
-  if (rate.classification === 'derived') return 'Epic multiplicador; derivado; verificado'
-  return 'Datos proporcionados; no verificados'
+  if (rate.classification === 'published') {
+    return `Fuente: ${rate.source}; tasa publicada (verificada)`
+  }
+  return `Fuente: ${rate.source}; fracción derivada de multiplicador publicado (verificada)`
 }
 
 function App() {
@@ -70,38 +100,59 @@ function App() {
   return (
     <main>
       <header className="hero-header">
-        <p className="eyebrow">Análisis teórico de recompensas</p>
-        <h1>FortuneMarkov</h1>
-        <p>
-          Exploración de tasas de referencia y adquisición individual bajo hipótesis explícitas.
-        </p>
+        <div className="brand-mark" aria-hidden="true">FM</div>
+        <div className="hero-copy">
+          <p className="eyebrow">Análisis de botín <span>·</span> Modelo teórico</p>
+          <h1>Fortune<span>Markov</span></h1>
+          <p>
+            Explora las tasas de referencia y la adquisición individual con sus hipótesis a la vista.
+          </p>
+        </div>
+        <span className="hero-tag">RECOMPENSAS</span>
       </header>
 
       <section className="notice" aria-label="Advertencia del modelo">
-        <strong>Importante:</strong> las estimaciones usan intentos independientes y una tasa
-        constante mientras no se haya obtenido la recompensa. No confirman el funcionamiento real
-        de los cofres de Fortnite ni justifican probabilidades conjuntas.
+        <span className="notice-icon" aria-hidden="true">!</span>
+        <p>
+          <strong>Modelo teórico:</strong> las estimaciones suponen intentos independientes y una tasa
+          constante mientras no se obtenga la recompensa. No confirman el funcionamiento real de los
+          cofres de Fortnite ni justifican probabilidades conjuntas.
+        </p>
       </section>
 
       <section className="panel">
-        <h2>Catálogo de tasas</h2>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Probabilidades de obtención</p>
+            <h2>Catálogo de recompensas</h2>
+          </div>
+          <span className="count-badge">07 ELEMENTOS</span>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Recompensa</th>
-                <th>Normal</th>
-                <th>Treasure Hour</th>
+                <th>Normal <span className="th-unit">POR APERTURA</span></th>
+                <th>Hora del tesoro <span className="th-unit">POR APERTURA</span></th>
                 <th>Procedencia</th>
               </tr>
             </thead>
             <tbody>
               {rewards.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.name}</td>
+                  <td>
+                    <div className="reward-identity">
+                      <RewardThumbnail name={item.name} src={item.imageSrc} />
+                      <span>{item.name}</span>
+                    </div>
+                  </td>
                   <td>{formatFraction(item.rates.normal)}</td>
                   <td>{formatFraction(item.rates['treasure-hour'])}</td>
-                  <td>{provenance(item.rates.normal)} / {provenance(item.rates['treasure-hour'])}</td>
+                  <td className="provenance-cell">
+                    <span>{provenance(item.rates.normal)}</span>
+                    <span>{provenance(item.rates['treasure-hour'])}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -110,17 +161,29 @@ function App() {
       </section>
 
       <section className="panel">
-        <h2>Analizar una recompensa</h2>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Probabilidad individual</p>
+            <h2>Analizar una recompensa</h2>
+          </div>
+        </div>
         <div className="controls">
           <label>
             Recompensa
-            <select value={rewardId} onChange={(event) => setRewardId(event.target.value)}>
-              {rewards.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+            <span className="select-with-thumbnail">
+              <RewardThumbnail name={reward.name} src={reward.imageSrc} />
+              <select
+                aria-label="Recompensa"
+                value={rewardId}
+                onChange={(event) => setRewardId(event.target.value)}
+              >
+                {rewards.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </span>
           </label>
           <label>
             Escenario
@@ -129,7 +192,7 @@ function App() {
               onChange={(event) => setScenario(event.target.value as Scenario)}
             >
               <option value="normal">Normal</option>
-              <option value="treasure-hour">Treasure Hour</option>
+              <option value="treasure-hour">{scenarioLabel['treasure-hour']}</option>
             </select>
           </label>
         </div>
@@ -138,18 +201,12 @@ function App() {
           <article>
             <span>Tasa individual por apertura</span>
             <strong>{formatFraction(rate)}</strong>
-            <small>{percent(probability)}</small>
+            <small>{percent(probability)} <span className="metric-unit">por apertura</span></small>
           </article>
           <article>
             <span>Escenario seleccionado</span>
             <strong>{scenarioLabel[scenario]}</strong>
-            <small>
-              {rate.classification === 'published'
-                ? 'Publicado por Epic; verificado'
-                : rate.classification === 'derived'
-                  ? 'Derivado de multiplicador Epic; verificado'
-                  : 'Referencia no verificada'}
-            </small>
+            <small className={`status-label ${rate.classification}`}>{provenance(rate)}</small>
           </article>
         </div>
 
@@ -168,7 +225,7 @@ function App() {
                 ))}
               </tbody>
             </table>
-            <p className="small">El estado `Obtained` es absorbente: permanece en 1.</p>
+            <p className="small">El estado «Recompensa obtenida» es absorbente: permanece en 1.</p>
           </article>
 
           <article>
@@ -177,8 +234,8 @@ function App() {
               <thead>
                 <tr>
                   <th>Pasos</th>
-                  <th>Not Obtained</th>
-                  <th>Al menos una vez</th>
+                  <th>Cofre sin recompensa</th>
+                  <th>Recompensa obtenida</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,23 +251,47 @@ function App() {
                 })}
               </tbody>
             </table>
+            <p className="small">
+              «Cofre sin recompensa» indica que aún no se ha obtenido la recompensa seleccionada;
+              no significa que el cofre esté vacío.
+            </p>
           </article>
         </div>
 
-        <h3>Comparación Normal / Treasure Hour</h3>
+        <h3 className="subsection-title">Comparación acumulada <span>Normal / Hora del tesoro</span></h3>
         <div className="chart" aria-label="Gráfico de comparación acumulada">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={comparison}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="step" />
-              <YAxis unit="%" />
+              <CartesianGrid stroke="#303236" strokeDasharray="3 3" />
+              <XAxis dataKey="step" stroke="#8c9097" tickLine={false} axisLine={false} />
+              <YAxis unit="%" stroke="#8c9097" tickLine={false} axisLine={false} />
               <Tooltip
                 formatter={(value) => percent(Number(value) / 100)}
                 labelFormatter={(value) => `${value} pasos`}
+                contentStyle={{
+                  background: '#17191b',
+                  border: '1px solid #3a3b3e',
+                  borderRadius: '10px',
+                  color: '#f4f1e9',
+                }}
+                labelStyle={{ color: '#d8b15a' }}
               />
-              <Legend />
-              <Bar dataKey="Normal" fill="#4f46e5" />
-              <Bar dataKey="Treasure Hour" fill="#f59e0b" />
+              <Legend
+                content={() => (
+                  <ul className="chart-legend" aria-label="Leyenda del gráfico">
+                    <li>
+                      <span className="chart-legend-marker normal" aria-hidden="true" />
+                      Normal
+                    </li>
+                    <li>
+                      <span className="chart-legend-marker treasure-hour" aria-hidden="true" />
+                      Hora del tesoro
+                    </li>
+                  </ul>
+                )}
+              />
+              <Bar dataKey="Normal" name="Normal" fill="#d8b15a" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Treasure Hour" name="Hora del tesoro" fill="#92979e" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -219,7 +300,7 @@ function App() {
             <tr>
               <th>Pasos</th>
               <th>Normal</th>
-              <th>Treasure Hour</th>
+              <th>Hora del tesoro</th>
             </tr>
           </thead>
           <tbody>
@@ -235,7 +316,21 @@ function App() {
       </section>
 
       <section className="panel">
-        <h2>Simulador de una recompensa</h2>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Experimento aleatorio</p>
+            <h2>Simulador de una recompensa</h2>
+          </div>
+          <span className="count-badge">UNA RECOMPENSA</span>
+        </div>
+        <div className="simulator-reward">
+          <RewardThumbnail name={reward.name} src={reward.imageSrc} />
+          <div>
+            <span>Recompensa y escenario seleccionados</span>
+            <strong>{reward.name}</strong>
+          </div>
+          <span className="scenario-chip">{scenarioLabel[scenario]}</span>
+        </div>
         <div className="controls">
           <label>
             Intentos por secuencia
@@ -278,9 +373,10 @@ function App() {
           </div>
         )}
         <p className="notice">
-          Esta simulación usa Bernoulli por intento y detiene una secuencia al adquirir la
+          <span className="notice-icon" aria-hidden="true">!</span>
+          <span>Esta simulación usa Bernoulli por intento y detiene una secuencia al adquirir la
           recompensa. Es una ilustración del modelo teórico, no una reproducción confirmada de la
-          mecánica real de Fortnite.
+          mecánica real de Fortnite.</span>
         </p>
         <p className="small">
           No se simula el botín completo ni resultados conjuntos. Las siete tasas marginales no
@@ -289,10 +385,17 @@ function App() {
       </section>
 
       <footer>
-        Las fuentes o tasas pueden cambiar. Los valores normales están respaldados por Epic
-        Games Support; tres denominadores de Treasure Hour son cálculos derivados de
-        multiplicadores publicados y no tasas publicadas directamente. Fortnite.GG no está
-        registrado como fuente verificada. Consulta: 20/11/2026.
+        Fuente oficial principal:{' '}
+        <a href={sourceReferences.epicGames.url} target="_blank" rel="noreferrer">
+          Epic Games
+        </a>
+        {' · '}Referencia complementaria para las tasas normales:{' '}
+        <a href={sourceReferences.fortniteGG.url} target="_blank" rel="noreferrer">
+          Fortnite.GG
+        </a>
+        . Las fracciones de Hora del tesoro expresan las tasas resultantes de los multiplicadores
+        publicados por Epic; los denominadores originales se conservan. El balance puede cambiar
+        con las actualizaciones del juego.
       </footer>
     </main>
   )
